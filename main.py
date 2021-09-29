@@ -11,6 +11,7 @@ steel_blue = (27, 51, 71)
 
 # below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
 
+
 def load_map():
     file = open("assets/map.txt")
     data = file.read()
@@ -96,7 +97,6 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-
 
         screen.scale()
 
