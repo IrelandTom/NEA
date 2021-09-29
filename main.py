@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import pygame
 import sys
 
@@ -59,17 +57,26 @@ class Screen:
             y += 1
 
 
-class Player(pygame.sprite.Sprite):  # sprite class
+class Player1(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("assets/man.png").convert()
+        self.image = pygame.image.load("assets/man.png")
         self.image.set_colorkey(white)
         self.rect = self.image.get_rect()
         self.thing_img = pygame.transform.scale(self.image, (55, 40))
         self.rect.center = [pos_x, pos_y]
 
-    def player_move(self):
-        pass
+    def player_1_move(self, keys_pressed):
+        velocity = 5
+        keys_pressed = pygame.key.get_pressed()
+        if keys_pressed[pygame.K_LEFT]:  # LEFT
+            self.rect.x -= velocity
+        if keys_pressed[pygame.K_RIGHT]:  # RIGHT
+            self.rect.x += velocity
+        if keys_pressed[pygame.K_DOWN]:  # DOWN
+            self.rect.y += velocity
+        if keys_pressed[pygame.K_UP]:  # UP
+            self.rect.y -= velocity
 
 
 def main():
@@ -78,27 +85,29 @@ def main():
     screen = Screen(1360, 700)
 
     # man test
-    man = Player(200, 200)
+    man = Player1(200, 200)
     man_group = pygame.sprite.Group()
     man_group.add(man)
 
-    screen.display.fill(steel_blue)
-
-    screen.draw_map()
-
     while True:
-        clock.tick(50)
+
+        clock.tick(60)
+
         screen.draw_win()
 
         man_group.draw(screen.display)
-        pygame.display.update()
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
+        keys_pressed = pygame.key.get_pressed()
+        man.player_1_move(keys_pressed)
         screen.scale()
+        screen.display.fill(steel_blue)
+        screen.draw_map()
+        pygame.display.update()
 
 
 if __name__ == "__main__":
