@@ -9,6 +9,7 @@ black = (0, 0, 0)
 red = (255, 0, 0)
 steel_blue = (27, 51, 71)
 
+# below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
 
 def load_map():
     file = open("assets/map.txt")
@@ -37,7 +38,7 @@ class Screen:
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
 
-    def draw_map(self):
+    def draw_map(self):  # taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
         tile_size = 16
         block_1 = pygame.image.load("assets/test_block1.png")
         block_2 = pygame.image.load("assets/test_block2.png")
@@ -57,7 +58,7 @@ class Screen:
             y += 1
 
 
-class Thing(pygame.sprite.Sprite):  # sprite class
+class Player(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load("assets/man.png").convert()
@@ -66,6 +67,9 @@ class Thing(pygame.sprite.Sprite):  # sprite class
         self.thing_img = pygame.transform.scale(self.image, (55, 40))
         self.rect.center = [pos_x, pos_y]
 
+    def player_move(self):
+        pass
+
 
 def main():
     # create objects
@@ -73,7 +77,7 @@ def main():
     screen = Screen(1360, 700)
 
     # man test
-    man = Thing(100, 100)
+    man = Player(200, 200)
     man_group = pygame.sprite.Group()
     man_group.add(man)
 
@@ -92,6 +96,7 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+
 
         screen.scale()
 
