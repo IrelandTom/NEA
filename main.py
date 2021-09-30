@@ -57,25 +57,29 @@ class Screen:
             y += 1
 
 
-class Player1(pygame.sprite.Sprite):  # sprite class
-    def __init__(self, pos_x, pos_y):
+class Player(pygame.sprite.Sprite):  # sprite class
+    def __init__(self, pos_x, pos_y, image, key_left, key_right, key_down, key_up):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.image.load("assets/man.png")
+        self.image = pygame.image.load(image)
         self.image.set_colorkey(white)
         self.rect = self.image.get_rect()
-        self.thing_img = pygame.transform.scale(self.image, (55, 40))
+        self.img = pygame.transform.scale(self.image, (55, 40))
         self.rect.center = [pos_x, pos_y]
+        self.left = key_left
+        self.right = key_right
+        self.down = key_down
+        self.up = key_up
 
-    def player_1_move(self, keys_pressed):
-        velocity = 5
+    def player_move(self, keys_pressed):
+        velocity = 2
         keys_pressed = pygame.key.get_pressed()
-        if keys_pressed[pygame.K_LEFT]:  # LEFT
+        if keys_pressed[pygame.k_self.left]:  # LEFT
             self.rect.x -= velocity
-        if keys_pressed[pygame.K_RIGHT]:  # RIGHT
+        if keys_pressed[pygame.K_self.right]:  # RIGHT
             self.rect.x += velocity
-        if keys_pressed[pygame.K_DOWN]:  # DOWN
+        if keys_pressed[pygame.K_self.down]:  # DOWN
             self.rect.y += velocity
-        if keys_pressed[pygame.K_UP]:  # UP
+        if keys_pressed[pygame.K_self.up]:  # UP
             self.rect.y -= velocity
 
 
@@ -84,10 +88,10 @@ def main():
     clock = pygame.time.Clock()
     screen = Screen(1360, 700)
 
-    # man test
-    man = Player1(200, 200)
-    man_group = pygame.sprite.Group()
-    man_group.add(man)
+    # players
+    player = Player(200, 200, "assets/player_1.png", a, d, s, w)
+    player_group = pygame.sprite.Group()
+    player_group.add(player)
 
     while True:
 
@@ -95,7 +99,7 @@ def main():
 
         screen.draw_win()
 
-        man_group.draw(screen.display)
+        player_group.draw(screen.display)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -103,7 +107,7 @@ def main():
                 sys.exit()
 
         keys_pressed = pygame.key.get_pressed()
-        man.player_1_move(keys_pressed)
+        player.player_move(keys_pressed)
         screen.scale()
         screen.display.fill(steel_blue)
         screen.draw_map()
