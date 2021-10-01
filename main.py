@@ -73,13 +73,13 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def player_move(self, keys_pressed):
         velocity = 2
         keys_pressed = pygame.key.get_pressed()
-        if keys_pressed[pygame.k_self.left]:  # LEFT
+        if keys_pressed[self.left]:  # LEFT
             self.rect.x -= velocity
-        if keys_pressed[pygame.K_self.right]:  # RIGHT
+        if keys_pressed[self.right]:  # RIGHT
             self.rect.x += velocity
-        if keys_pressed[pygame.K_self.down]:  # DOWN
+        if keys_pressed[self.down]:  # DOWN
             self.rect.y += velocity
-        if keys_pressed[pygame.K_self.up]:  # UP
+        if keys_pressed[self.up]:  # UP
             self.rect.y -= velocity
 
 
@@ -89,11 +89,13 @@ def main():
     screen = Screen(1360, 700)
 
     # players
-    player = Player(200, 200, "assets/player_1.png", a, d, s, w)
+    player_1 = Player(200, 200, "assets/player_1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
+    player_2 = Player(250, 200, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
-    player_group.add(player)
+    player_group.add(player_1, player_2)
 
     while True:
+
 
         clock.tick(60)
 
@@ -107,7 +109,8 @@ def main():
                 sys.exit()
 
         keys_pressed = pygame.key.get_pressed()
-        player.player_move(keys_pressed)
+        player_1.player_move(keys_pressed)
+        player_2.player_move(keys_pressed)
         screen.scale()
         screen.display.fill(steel_blue)
         screen.draw_map()
