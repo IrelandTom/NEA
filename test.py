@@ -87,41 +87,48 @@ class Player(pygame.sprite.Sprite):  # sprite class
         for tile in tiles:
             if rect.colliderect(tile):
                 self.hit_list.append(tile)
+
         return self.hit_list
 
     def move(self, movement, tiles):
         collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
-        self.rect.x += self.x_velocity
+        # self.rect.x += movement[0]
+        # hit_list = self.collision_test(self.rect, tiles)
+        # for tile in hit_list:
+        #     if movement[0] > 0:
+        #         self.rect.right = tile.left
+        #         collision_types["right"] = True
+        #     elif movement[0] < 0:
+        #         self.rect.left = tile.right
+        #         collision_types["left"] = True
+        # self.rect.y += movement[1]
+        # hit_list = self.collision_test(self.rect, tiles)
+        # for tile in hit_list:
+        #     if movement[1] > 0:
+        #         self.rect.bottom = tile.top
+        #         collision_types['bottom'] = True
+        #     elif movement[1] < 0:
+        #         self.rect.top = tile.bottom
+        #         collision_types['top'] = True
+        # return self.rect, collision_types
         hit_list = self.collision_test(self.rect, tiles)
         for tile in hit_list:
-            if movement[0] > 0:
-                self.rect.right = tile.left
-                collision_types["right"] = True
-            elif movement[0] < 0:
-                self.rect.left = tile.right
-                collision_types["left"] = True
-        self.rect.y += movement[1]
-        hit_list = self.collision_test(self.rect, tiles)
-        for tile in hit_list:
-            if movement[1] > 0:
+            if self.rect.bottom.colliderect(tile_rects):
                 self.rect.bottom = tile.top
-                collision_types['bottom'] = True
-            elif movement[1] < 0:
-                self.rect.top = tile.bottom
-                collision_types['top'] = True
-        return self.rect, collision_types
+
+
 
     def player_move(self):
         if self.moving_right:
             self.rect.x += self.x_velocity
             # self.player_movement[0] += 2
         if self.moving_left:
-            #self.player_movement[0] -= 2
+            # self.player_movement[0] -= 2
             self.rect.x -= self.x_velocity
         self.rect.y += self.player_y_momentum
         self.player_y_momentum += 0.2
-        if self.player_y_momentum > 3:
-            self.player_y_momentum = 3
+        if self.player_y_momentum > 100:
+            self.player_y_momentum = 10
 
     def key_events(self, event):
 
@@ -157,7 +164,7 @@ def main():
     player_2 = Player(250, 200, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
     player_group.add(player_1, player_2)
-    player_rect1 = player_1.rect
+    player_1_rect = player_1.rect
 
     while True:
 
@@ -172,7 +179,6 @@ def main():
         player_1.player_move()
         player_2.player_move()
 
-
         for event in pygame.event.get():
             player_1.key_events(event)
             player_2.key_events(event)
@@ -180,14 +186,12 @@ def main():
             if keys_pressed[pygame.K_y]:
                 bg = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
                 screen.display.fill(bg)
-        keys_pressed = pygame.key.get_pressed()
 
+        keys_pressed = pygame.key.get_pressed()
         screen.scale()
         screen.display.fill(steel_blue)
-
+        tile_rects.clear()
         pygame.display.update()
-
-
 
 
 if __name__ == "__main__":
