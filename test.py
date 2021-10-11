@@ -113,8 +113,14 @@ class Player(pygame.sprite.Sprite):  # sprite class
         # return self.rect, collision_types
         hit_list = self.collision_test(self.rect, tiles)
         for tile in hit_list:
-            if self.rect.bottom.colliderect(tile_rects):
-                self.rect.bottom = tile.top
+            if self.rect.bottom >= tile.top:
+                if self.rect.colliderect(tile):
+                    self.rect.bottom = tile.top - 1
+            if self.rect.top <= tile.bottom:
+                if self.rect.colliderect(tile):
+                    self.rect.top = tile.bottom
+
+
 
 
 
@@ -126,9 +132,9 @@ class Player(pygame.sprite.Sprite):  # sprite class
             # self.player_movement[0] -= 2
             self.rect.x -= self.x_velocity
         self.rect.y += self.player_y_momentum
-        self.player_y_momentum += 0.2
-        if self.player_y_momentum > 100:
-            self.player_y_momentum = 10
+        self.player_y_momentum += 0.3
+        if self.player_y_momentum > 4:
+            self.player_y_momentum = 4
 
     def key_events(self, event):
 
