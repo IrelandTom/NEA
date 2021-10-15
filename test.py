@@ -1,4 +1,3 @@
-
 import pygame
 import sys
 import random
@@ -35,14 +34,22 @@ tile_rects = []
 
 class Screen:
     def __init__(self, width, height):
+        self.info_object = pygame.display.Info()
         self.window_size = (width, height)
-        self.screen = pygame.display.set_mode(self.window_size)
-        self.display = pygame.Surface((width // 2, height // 2))
+        self.screen = pygame.display.set_mode((self.window_size), pygame.RESIZABLE)
+        self.display = pygame.Surface((width // 2, height // 2), pygame.RESIZABLE)
         self.cheese = "123"
 
     def scale(self):
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
+
+    def full_screen(self, event):
+        if event.type == KEYDOWN:
+            if event.key == K_LALT:
+                self.screen = pygame.display.set_mode((self.screen.get_width(), self.screen.get_height()), pygame.FULLSCREEN)
+            else:
+                self.screen = pygame.display.set_mode((self.screen.get_width(), self.screen.get_height()), pygame.RESIZABLE)
 
     def draw_map(self):  # taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
         tile_size = 16
@@ -78,18 +85,16 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.moving_left = False
         self.moving_up = False
         self.hit_list = []
-        self.player_y_velocity = 0
+        self.player_y_momentum = 0
         self.air_timer = 0
         self.player_movement = [0, 0]
         self.x_velocity = 2
 
     def collision_test(self, rect, tiles):
-        self.hit_list = []
         for tile in tiles:
             if rect.colliderect(tile):
-                print(tile.x)
                 self.hit_list.append(tile)
-                print(self.hit_list)
+
         return self.hit_list
 
     def move(self, movement, tiles):
@@ -115,10 +120,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
         # return self.rect, collision_types
         hit_list = self.collision_test(self.rect, tiles)
         for tile in hit_list:
-            if self.rect.bottom >= tile.top:  # if bottom of player is below tile (and not moving up)
+            if self.rect.bottom >= tile.top:
                 if self.rect.colliderect(tile):
-                    self.rect.bottom = tile.top - 3
-            if self.rect.top >= tile.bottom:  # head is above bottom of tile then
+                    self.rect.bottom = tile.top - 1
+            if self.rect.top <= tile.bottom:
                 if self.rect.colliderect(tile):
                     self.rect.top = tile.bottom
 
@@ -133,10 +138,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
         if self.moving_left:
             # self.player_movement[0] -= 2
             self.rect.x -= self.x_velocity
-        self.rect.y += self.player_y_velocity
-        self.player_y_velocity += 0.3
-        if self.player_y_velocity > 4:
-            self.player_y_velocity = 4
+        self.rect.y += self.player_y_momentum
+        self.player_y_momentum += 0.3
+        if self.player_y_momentum > 4:
+            self.player_y_momentum = 4
 
     def key_events(self, event):
 
@@ -149,7 +154,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 pass
             if event.key == self.up:
                 if self.air_timer < 6:
-                    self.player_y_velocity = -5
+                    self.player_y_momentum = -5
         if event.type == KEYUP:
             if event.key == self.right:
                 self.moving_right = False
@@ -191,9 +196,11 @@ def main():
             player_1.key_events(event)
             player_2.key_events(event)
             keys_pressed = pygame.key.get_pressed()
+
             if keys_pressed[pygame.K_y]:
                 bg = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
                 screen.display.fill(bg)
+            screen.full_screen(event)
 
         keys_pressed = pygame.key.get_pressed()
         screen.scale()
