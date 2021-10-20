@@ -1,4 +1,3 @@
-
 import pygame
 import sys
 import random
@@ -81,7 +80,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.player_y_momentum = 0
         self.air_timer = 0
         self.player_movement = [0, 0]
-        self.x_velocity = 2
+        self.x_velocity = 0
+        self.falling = False
 
     def collision_test(self, rect, tiles):
         for tile in tiles:
@@ -111,18 +111,26 @@ class Player(pygame.sprite.Sprite):  # sprite class
         #         self.rect.top = tile.bottom
         #         collision_types['top'] = True
         # return self.rect, collision_types
+
         hit_list = self.collision_test(self.rect, tiles)
         for tile in hit_list:
-            if self.rect.bottom >= tile.top:
-                if self.rect.colliderect(tile):
-                    self.rect.bottom = tile.top - 1
-            if self.rect.top <= tile.bottom:
-                if self.rect.colliderect(tile):
-                    self.rect.top = tile.bottom
-
-
-
-
+            if self.moving_right:
+                self.x_velocity = 0
+                self.rect.right = tile.left
+                collision_types['right'] = True
+            elif self.moving_left:
+                self.x_velocity = 0
+                self.rect.left = tile.right
+                collision_types['left'] = True
+        for tile in hit_list:
+            if self.player_y_momentum < 0:
+                if self.rect.top <= tile.bottom:
+                    self.rect.top = tile.bottom + 1
+                    collision_types['bottom'] = True
+            if self.falling:
+                if self.rect.bottom > tile.top:
+                    self.rect.bottom = tile.top
+                    collision_types['bottom'] = True
 
     def player_move(self):
         if self.moving_right:
@@ -130,28 +138,35 @@ class Player(pygame.sprite.Sprite):  # sprite class
             # self.player_movement[0] += 2
         if self.moving_left:
             # self.player_movement[0] -= 2
-            self.rect.x -= self.x_velocity
+            self.rect.x += self.x_velocity
         self.rect.y += self.player_y_momentum
         self.player_y_momentum += 0.3
         if self.player_y_momentum > 4:
             self.player_y_momentum = 4
+        if self.player_y_momentum >= 0:
+            self.falling = True
 
     def key_events(self, event):
 
         if event.type == KEYDOWN:
             if event.key == self.right:
+                self.x_velocity = 2
                 self.moving_right = True
             if event.key == self.left:
+                self.x_velocity = -2
                 self.moving_left = True
             if event.key == self.down:
                 pass
             if event.key == self.up:
+                self.moving_up = True
                 if self.air_timer < 6:
                     self.player_y_momentum = -5
         if event.type == KEYUP:
             if event.key == self.right:
+                self.x_velocity = 0
                 self.moving_right = False
             if event.key == self.left:
+                self.x_velocity = 0
                 self.moving_left = False
             if event.key == self.down:
                 pass
@@ -160,14 +175,17 @@ class Player(pygame.sprite.Sprite):  # sprite class
             sys.exit()
 
 
+recty = pygame.Rect(200, 107, 16, 16)
+
+
 def main():
     # create objects
     clock = pygame.time.Clock()
     screen = Screen(1360, 700)
 
     # players
-    player_1 = Player(200, 200, "assets/player_1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
-    player_2 = Player(250, 200, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
+    player_1 = Player(200, 100, "assets/player_1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
+    player_2 = Player(250, 100, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
     player_group.add(player_1, player_2)
     player_1_rect = player_1.rect
@@ -177,6 +195,8 @@ def main():
         clock.tick(60)
 
         screen.draw_map()
+
+        pygame.draw.rect(screen.display, (255, 0, 0), recty)
 
         player_group.draw(screen.display)
 
