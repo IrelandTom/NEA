@@ -92,20 +92,21 @@ class Player(pygame.sprite.Sprite):  # sprite class
             self.player_movement[0] += -2
         # if we are holding down the key to move up we move up
         self.player_movement[1] += self.player_y_velocity
-        self.player_y_velocity += 0.2
-        if self.player_y_velocity >= 3:
-            self.player_y_velocity = 3
+        # self.player_y_velocity += 0.2
+        # if self.player_y_velocity >= 4:
+        #     self.player_y_velocity = 4
 
     def collision_test(self, rect, tiles):
         for tile in tiles:
+            # pygame.Rect(tile)
             if rect.colliderect(tile):
                 self.hit_list.append(tile)
 
         return self.hit_list
 
-    def collision_physics(self, rect, tile):
+    def collision_physics(self, rect, tiles):
         rect.x += self.player_movement[0]
-        hit_list = self.collision_test(rect, tile)
+        hit_list = self.collision_test(rect, tiles)
         for tile in hit_list:
             if self.player_movement[0] > 0:
                 rect.right = tile.left
@@ -113,8 +114,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
             elif self.player_movement[0] < 0:
                 rect.left = tile.right
                 self.collision_types['left'] = True
-        self.rect.y += self.player_movement[1]
-        hit_list = self.collision_test(rect, tile)
+        rect.y += self.player_movement[1]
+        hit_list = self.collision_test(rect, tiles)
         for tile in hit_list:
             if self.player_movement[1] > 0:
                 rect.bottom = tile.top
@@ -122,7 +123,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             elif self.player_movement[1] < 0:
                 rect.top = tile.bottom
                 self.collision_types['top'] = True
-        return tile, self.collision_types
+        return tiles, self.collision_types
     # def move(self, movement, tiles):
     #     collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
     #     # self.rect.x += movement[0]
@@ -221,7 +222,6 @@ def main():
     player_2 = Player(250, 100, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
     player_group.add(player_1, player_2)
-    player_1_rect = player_1.rect
 
     while True:
 
