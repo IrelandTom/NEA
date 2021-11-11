@@ -77,7 +77,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.moving_left = False
         self.moving_up = True
         self.hit_list = []
-        self.player_y_velocity = 0
+        self.y_velocity = 0
         self.air_timer = 0
         self.player_movement = [0, 0]
         self.x_velocity = 0
@@ -102,10 +102,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
 
         if self.moving_up:
             # gravity
-            self.player_y_velocity += 0.3
-            if self.player_y_velocity > 4:
-                self.player_y_velocity = 4
-            if self.player_y_velocity >= 0:
+            self.y_velocity += 0.3
+            if self.y_velocity > 4:
+                self.y_velocity = 4
+            if self.y_velocity >= 0:
                 self.falling = True
 
         # update x position then check for collisions
@@ -125,10 +125,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.rect.left = tile.right
                 self.collision_types["left"] = True
         # update y pos then check for collisions again
-        self.rect.y += self.player_y_velocity
+        self.rect.y += self.y_velocity
         for tile in hit_list:
             # if the y velocity less than 0 then going up so collision type must be top
-            if self.player_y_velocity < 0:
+            if self.y_velocity < 0:
                 if self.rect.top <= tile.bottom:
                     # same as before but for a top collision
                     self.rect.top = tile.bottom + 1
@@ -154,11 +154,11 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if event.key == self.down:
                 pass
             if event.key == self.up:
-                print(self.player_y_velocity)
+                print(self.y_velocity)
                 self.moving_up = True
                 self.falling = False
                 if self.air_timer < 6:
-                    self.player_y_velocity = -5
+                    self.y_velocity = -5
         # can un-toggle the stuff from keydowns or bind to new toggles
         if event.type == KEYUP:
             if event.key == self.right:
