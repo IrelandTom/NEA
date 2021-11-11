@@ -100,6 +100,14 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.collision_types["right"] = False
         # __________________________________ #
 
+        if self.moving_up:
+            # gravity
+            self.player_y_velocity += 0.3
+            if self.player_y_velocity > 4:
+                self.player_y_velocity = 4
+            if self.player_y_velocity >= 0:
+                self.falling = True
+
         # update x position then check for collisions
         self.rect.x += self.x_velocity
         # access collision test function to use colliderect
@@ -132,32 +140,16 @@ class Player(pygame.sprite.Sprite):  # sprite class
                     self.rect.bottom = tile.top
                     self.collision_types["bottom"] = True
 
-    def player_move(self):
-        # setting up the player movement using bools
-        if self.moving_right:
-            self.x_velocity = 2
-            # self.player_movement[0] += 2
-        if self.moving_left:
-            # self.player_movement[0] -= 2
-            self.x_velocity = -2
-        if self.moving_up:
-            # gravity
-            self.player_y_velocity += 0.3
-            if self.player_y_velocity > 4:
-                self.player_y_velocity = 4
-            if self.player_y_velocity >= 0:
-                self.falling = True
-            # if self.collision_types["bottom"]:
-            #     self.falling = False
-
     def key_events(self, event):
         # key down section will allow for things to be toggled when key pressed down
         if event.type == KEYDOWN:
             if event.key == self.right:
                 self.moving_right = True
+                self.x_velocity = 2
                 print(self.x_velocity)
             if event.key == self.left:
                 self.moving_left = True
+                self.x_velocity = -2
                 print(self.x_velocity)
             if event.key == self.down:
                 pass
@@ -209,8 +201,6 @@ def main():
 
         player_1.move(player_1.player_movement, tile_rects)
         player_2.move(player_2.player_movement, tile_rects)
-        player_1.player_move()
-        player_2.player_move()
 
         for event in pygame.event.get():
             player_1.key_events(event)
