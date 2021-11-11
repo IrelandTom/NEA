@@ -78,23 +78,23 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.hit_list = []
         self.player_y_velocity = 0
         self.air_timer = 0
-        self.player_movement = [0, 0]
-        self.x_velocity = 0
+        self.player_velocity = [0, 0]
+        self.x_velocity = 2
         self.falling = False
         self.collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
 
-    def handle_player_movement(self):
+    def handle_player_velocity(self):
         # if we are holding down the key to move right we move right
         if self.moving_right:
-            self.player_movement[0] += 2
+            self.player_velocity[0] += self.x_velocity
         # if we are holding down the key to move left we move left
         if self.moving_left:
-            self.player_movement[0] += -2
+            self.player_velocity[0] -= self.x_velocity
         # if we are holding down the key to move up we move up
-        self.player_movement[1] += self.player_y_velocity
-        # self.player_y_velocity += 0.2
-        # if self.player_y_velocity >= 4:
-        #     self.player_y_velocity = 4
+        self.player_velocity[1] += self.player_y_velocity
+        self.player_y_velocity += 0.2
+        if self.player_y_velocity >= 4:
+            self.player_y_velocity = 4
 
     def collision_test(self, rect, tiles):
         for tile in tiles:
@@ -105,22 +105,22 @@ class Player(pygame.sprite.Sprite):  # sprite class
         return self.hit_list
 
     def collision_physics(self, rect, tiles):
-        rect.x += self.player_movement[0]
+        rect.x += self.player_velocity[0]
         hit_list = self.collision_test(rect, tiles)
         for tile in hit_list:
-            if self.player_movement[0] > 0:
+            if self.player_velocity[0] > 0:
                 rect.right = tile.left
                 self.collision_types['right'] = True
-            elif self.player_movement[0] < 0:
+            elif self.player_velocity[0] < 0:
                 rect.left = tile.right
                 self.collision_types['left'] = True
-        rect.y += self.player_movement[1]
+        rect.y += self.player_velocity[1]
         hit_list = self.collision_test(rect, tiles)
         for tile in hit_list:
-            if self.player_movement[1] > 0:
+            if self.player_velocity[1] > 0:
                 rect.bottom = tile.top
                 self.collision_types['bottom'] = True
-            elif self.player_movement[1] < 0:
+            elif self.player_velocity[1] < 0:
                 rect.top = tile.bottom
                 self.collision_types['top'] = True
         return tiles, self.collision_types
@@ -169,9 +169,9 @@ class Player(pygame.sprite.Sprite):  # sprite class
     # def player_move(self):
     #     if self.moving_right:
     #         self.rect.x += self.x_velocity
-    #         # self.player_movement[0] += 2
+    #         # self.player_velocity[0] += 2
     #     if self.moving_left:
-    #         # self.player_movement[0] -= 2
+    #         # self.player_velocity[0] -= 2
     #         self.rect.x += self.x_velocity
     #     self.rect.y += self.player_y_velocity
     #     self.player_y_velocity += 0.3
@@ -184,22 +184,23 @@ class Player(pygame.sprite.Sprite):  # sprite class
 
         if event.type == KEYDOWN:
             if event.key == self.right:
-                self.x_velocity = 1
                 self.moving_right = True
             if event.key == self.left:
-                self.x_velocity = -1
                 self.moving_left = True
             if event.key == self.down:
                 pass
             if event.key == self.up:
                 self.moving_up = True
                 # if self.air_timer < 6:
-                self.player_y_velocity = - 5
+                self.player_y_velocity = -5
         if event.type == KEYUP:
             if event.key == self.right:
+                self.player_velocity[0] = 0
                 # self.x_velocity = 0
                 self.moving_right = False
+                print(self.moving_right)
             if event.key == self.left:
+                self.player_velocity[0] = 0
                 # self.x_velocity = 0
                 self.moving_left = False
             if event.key == self.down:
@@ -209,7 +210,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             sys.exit()
 
 
-recty = pygame.Rect(200, 107, 16, 16)
+# recty = pygame.Rect(200, 107, 16, 16)
 
 
 def main():
@@ -229,14 +230,12 @@ def main():
 
         screen.draw_map()
 
-        pygame.draw.rect(screen.display, (255, 0, 0), recty)
+        # pygame.draw.rect(screen.display, (255, 0, 0), recty)
 
         player_group.draw(screen.display)
 
-        # player_1.move(player_1.player_movement, tile_rects)
-        # player_2.move(player_2.player_movement, tile_rects)
-        player_1.handle_player_movement()
-        player_2.handle_player_movement()
+        player_1.handle_player_velocity()
+        player_2.handle_player_velocity()
         player_1.collision_physics(player_1.rect, tile_rects)
         player_2.collision_physics(player_2.rect, tile_rects)
 
