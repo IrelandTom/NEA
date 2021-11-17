@@ -11,19 +11,19 @@ steel_blue = (27, 51, 71)
 
 
 #  below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
-def load_map():
-    file = open("assets/map.txt")
-    data = file.read()
-    file.close()
-    data = data.split('\n')
-    game_map = []
-    for row in data:
-        game_map.append(list(row))
-    return game_map
-
-
-game_map = load_map()
-tile_rects = []
+# def load_map():
+#     file = open("assets/map.txt")
+#     data = file.read()
+#     file.close()
+#     data = data.split('\n')
+#     game_map = []
+#     for row in data:
+#         game_map.append(list(row))
+#     return game_map
+#
+#
+# game_map = load_map()
+# tile_rects = []
 
 
 class Screen:
@@ -37,20 +37,36 @@ class Screen:
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
 
-    def draw_map(self):  # taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
+
+class Map:
+    def __init__(self, map_file):
+        self.map_file = map_file
+        self.tile_rects = []
+        self.game_map = []
+
+    def load_map(self):  # below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
+        file = open(self.map_file)
+        data = file.read()
+        file.close()
+        data = data.split("\n")
+        for row in data:
+            self.game_map.append(list(row))
+        return self.game_map
+
+    def draw_map(self, screen):  # taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
         tile_size = 16
         block_1 = pygame.image.load("assets/test_block1.png")
         block_2 = pygame.image.load("assets/test_block2.png")
         y = 0
-        for layer in game_map:
+        for layer in self.game_map:
             x = 0
             for tile in layer:
                 if tile == '1':
-                    self.display.blit(block_1, (x * tile_size, y * tile_size))
+                    screen.display.blit(block_1, (x * tile_size, y * tile_size))
                 if tile == '2':
-                    self.display.blit(block_2, (x * tile_size, y * tile_size))
+                    screen.display.blit(block_2, (x * tile_size, y * tile_size))
                 if tile != '0':
-                    tile_rects.append(pygame.Rect(x * tile_size, y * tile_size, tile_size, tile_size))
+                    self.tile_rects.append(pygame.Rect(x * tile_size, y * tile_size, tile_size, tile_size))
                 x += 1
             y += 1
 
@@ -169,6 +185,9 @@ def main():
     # create objects
     clock = pygame.time.Clock()
     screen = Screen(1360, 700)
+    # Map loading
+    map = Map("assets/map.txt")
+    game_map = map.load_map()
     # players
     player_1 = Player(200, 100, "assets/player_1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
     player_2 = Player(250, 100, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
@@ -178,16 +197,16 @@ def main():
     while True:
 
         clock.tick(60)
-        screen.draw_map()
-        # pygame.draw.rect(screen.display, (255, 0, 0), recty)
+        map.draw_map(screen)
+
         player_group.draw(screen.display)
-        player_1.move(tile_rects)
-        player_2.move(tile_rects)
+        player_1.move(map.tile_rects)
+        player_2.move(map.tile_rects)
         for event in pygame.event.get():
             player_1.key_events(event)
             player_2.key_events(event)
         screen.scale()
-        tile_rects.clear()
+        map.tile_rects.clear()
         screen.display.fill(steel_blue)
         pygame.display.flip()
 
