@@ -59,11 +59,16 @@ class Map:
 
 
 class Player(pygame.sprite.Sprite):  # sprite class
-    def __init__(self, pos_x, pos_y, image_default, image_right, image_left, key_left, key_right, key_down, key_up):
+    def __init__(self, pos_x, pos_y, image_default, image_right, image_left, image_walking_left1, image_walking_left2,
+                 image_walking_right1, image_walking_right2, key_left, key_right, key_down, key_up):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image_default)
         self.image_right = pygame.image.load(image_right)
         self.image_left = pygame.image.load(image_left)
+        self.image_walking_left1 = pygame.image.load(image_walking_left1)
+        self.image_walking_left2 = pygame.image.load(image_walking_left2)
+        self.image_walking_right1 = pygame.image.load(image_walking_right1)
+        self.image_walking_right2 = pygame.image.load(image_walking_right2)
         self.image_right.set_colorkey(white)
         self.image_left.set_colorkey(white)
         self.image.set_colorkey(white)
@@ -205,6 +210,14 @@ class Player(pygame.sprite.Sprite):  # sprite class
             self.image = self.image_left
         if self.player_orientation["right"]:
             self.image = self.image_right
+        counter = 0
+        while self.moving_left:
+            counter += 1
+            if counter % 2 == 0:
+                self.image = self.image_walking_left1
+            if counter % 2 != 0:
+                self.image = self.image_walking_left2
+
 
 
 def main():
@@ -217,14 +230,13 @@ def main():
     map = Map("assets/map.txt")
     game_map = map.load_map()
     # players
-    player_1 = Player(200, 100, "assets/frog_p1_right.png", "assets/frog_p1_right.png", "assets/frog_p1_left.png",
-                      pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
-    player_2 = Player(250, 100, "assets/frog_p2_left.png", "assets/frog_p2_right.png", "assets/frog_p2_left.png",
-                      pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
+    player_1 = Player(200, 100, "assets/frog_p1_right.png", "assets/frog_p1_right.png", "assets/frog_p1_left.png", "assets/frog_p1_left_walk1.png", "assets/frog_p1_left_walk2.png", "assets/frog_p1_right_walk1.png", "assets/frog_p1_right_walk2.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
+    player_2 = Player(250, 100, "assets/frog_p2_left.png", "assets/frog_p2_right.png", "assets/frog_p2_left.png", "assets/frog_p1_left_walk1.png", "assets/frog_p1_left_walk2.png", "assets/frog_p1_right_walk1.png", "assets/frog_p1_right_walk2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
     player_group.add(player_1, player_2)
 
     while True:
+
 
         clock.tick(60)
         map.draw_map(screen)
