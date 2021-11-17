@@ -59,10 +59,13 @@ class Map:
 
 
 class Player(pygame.sprite.Sprite):  # sprite class
-    def __init__(self, pos_x, pos_y, image, key_left, key_right, key_down, key_up):
+    def __init__(self, pos_x, pos_y, image_default, image_right, image_left, key_left, key_right, key_down, key_up):
         pygame.sprite.Sprite.__init__(self)
-
-        self.image = pygame.image.load(image)
+        self.image = pygame.image.load(image_default)
+        self.image_right = pygame.image.load(image_right)
+        self.image_left = pygame.image.load(image_left)
+        self.image_right.set_colorkey(white)
+        self.image_left.set_colorkey(white)
         self.image.set_colorkey(white)
         self.rect = self.image.get_rect()
         self.rect.center = [pos_x, pos_y]
@@ -79,6 +82,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.x_velocity = 0
         self.falling = False
         self.jumping = False
+        self.player_orientation = {"left": False, "right": False, "up": False, "down": False, "default": True}
         self.collision_types = {"top": False, "bottom": False, "right": False, "left": False}
 
     def collision_test(self, tiles):
@@ -154,34 +158,53 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def key_events(self, event):
         # key down section will allow for things to be toggled when key pressed down
         if event.type == KEYDOWN:
-            if event.key == self.right:
-                self.moving_right = True
-                self.x_velocity = 2
             if event.key == self.left:
                 self.moving_left = True
                 self.x_velocity = -2
-            if event.key == self.down:
-                pass
+                self.player_orientation["default"] = False
+                self.player_orientation["left"] = True
+            if event.key == self.right:
+                self.moving_right = True
+                self.x_velocity = 2
+                self.player_orientation["default"] = False
+                self.player_orientation["right"] = True
             if event.key == self.up:
+                self.player_orientation["default"] = False
+                self.player_orientation["up"] = True
                 if not self.jumping:
                     if self.player_y_velocity > 0:
                         self.jumping = True
                         self.player_y_velocity = -5
-                # if self.air_timer < 6:
-                #     self.player_y_velocity = -5
+            if event.key == self.down:
+                self.player_orientation["default"] = False
+                self.player_orientation["down"] = True
         # can un-toggle the stuff from key downs or bind to new toggles
         if event.type == KEYUP:
-            if event.key == self.right:
-                self.x_velocity = 0
-                self.moving_right = False
             if event.key == self.left:
                 self.x_velocity = 0
                 self.moving_left = False
+                self.player_orientation["left"] = False
+                self.player_orientation["default"] = True
+            if event.key == self.right:
+                self.x_velocity = 0
+                self.moving_right = False
+                self.player_orientation["right"] = False
+                self.player_orientation["default"] = True
             if event.key == self.down:
-                pass
+                self.player_orientation["up"] = False
+                self.player_orientation["default"] = True
+            if event.key == self.down:
+                self.player_orientation["down"] = False
+                self.player_orientation["default"] = True
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+
+    def player_animations(self):
+        if self.player_orientation["left"]:
+            self.image = self.image_left
+        if self.player_orientation["right"]:
+            self.image = self.image_right
 
 
 def main():
@@ -194,8 +217,10 @@ def main():
     map = Map("assets/map.txt")
     game_map = map.load_map()
     # players
-    player_1 = Player(200, 100, "assets/frog_p1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
-    player_2 = Player(250, 100, "assets/frog_p2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
+    player_1 = Player(200, 100, "assets/frog_p1_right.png", "assets/frog_p1_right.png", "assets/frog_p1_left.png",
+                      pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
+    player_2 = Player(250, 100, "assets/frog_p2_left.png", "assets/frog_p2_right.png", "assets/frog_p2_left.png",
+                      pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
     player_group = pygame.sprite.Group()
     player_group.add(player_1, player_2)
 
@@ -210,6 +235,8 @@ def main():
         for event in pygame.event.get():
             player_1.key_events(event)
             player_2.key_events(event)
+        player_1.player_animations()
+        player_2.player_animations()
         screen.scale()
         map.tile_rects.clear()
         screen.display.fill(steel_blue)
