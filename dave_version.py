@@ -1,15 +1,18 @@
 import pygame
 import sys
 import random
+
 from pygame.locals import *
 
 pygame.init()
 
 # colours easy access
+
 white = (255, 255, 255)
 black = (0, 0, 0)
 red = (255, 0, 0)
 steel_blue = (27, 51, 71)
+
 #  below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
 
 
@@ -24,7 +27,9 @@ def load_map():
     return game_map
 
 
-game_map = load_map()
+game_mapy = load_map()
+
+tile_rects = []
 
 
 class Screen:
@@ -32,9 +37,10 @@ class Screen:
         self.window_size = (width, height)
         self.screen = pygame.display.set_mode(self.window_size)
         self.display = pygame.Surface((width // 2, height // 2))
-        self.tile_rects = []
+        self.cheese = "123"
 
     def scale(self):
+        # changing the screen to allow for better pixel art rendering
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
 
@@ -42,8 +48,9 @@ class Screen:
         tile_size = 16
         block_1 = pygame.image.load("assets/test_block1.png")
         block_2 = pygame.image.load("assets/test_block2.png")
+
         y = 0
-        for layer in game_map:
+        for layer in game_mapy:
             x = 0
             for tile in layer:
                 if tile == '1':
@@ -51,14 +58,14 @@ class Screen:
                 if tile == '2':
                     self.display.blit(block_2, (x * tile_size, y * tile_size))
                 if tile != '0':
-                    self.tile_rects.append(pygame.Rect(x * tile_size, y * tile_size, tile_size, tile_size))
+                    tile_rects.append(pygame.Rect(x * tile_size, y * tile_size, tile_size, tile_size))
                 x += 1
             y += 1
 
 
-class Player(pygame.sprite.DirtySprite):  # sprite class
+class Player(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y, image, key_left, key_right, key_down, key_up):
-        pygame.sprite.DirtySprite.__init__(self)
+        pygame.sprite.Sprite.__init__(self)
         self.image = pygame.image.load(image)
         self.image.set_colorkey(white)
         self.rect = self.image.get_rect()
@@ -70,20 +77,20 @@ class Player(pygame.sprite.DirtySprite):  # sprite class
         self.moving_right = False
         self.moving_left = False
         self.moving_up = True
-        self.jumping = False
-        self.falling = True
         self.hit_list = []
-        self.player_y_velocity = 0
+        self.y_velocity = 0
         self.air_timer = 0
+        self.player_movement = [0, 0]
         self.x_velocity = 0
+        self.falling = False
         self.collision_types = {"top": False, "bottom": False, "right": False, "left": False}
 
-    def collision_test(self, screen_stuff):
+    def collision_test(self, rect, tiles):
         # takes list of all tile rects then checks if they have collided with the players
-        self.hit_list = []
-        for tile in screen_stuff.tile_rects:
-            if self.rect.colliderect(tile):
+        for tile in tiles:
+            if rect.colliderect(tile):
                 self.hit_list.append(tile)
+
         return self.hit_list
 
     def move(self, tiles):
@@ -93,44 +100,47 @@ class Player(pygame.sprite.DirtySprite):  # sprite class
         self.collision_types["left"] = False
         self.collision_types["right"] = False
         # __________________________________ #
-        self.player_y_velocity += 0.3
-        if self.player_y_velocity > 4:
-            self.player_y_velocity = 4
-        if self.player_y_velocity >= 0:
-            self.falling = True
+
+        if self.moving_up:
+            # gravity
+            self.y_velocity += 0.3
+            if self.y_velocity > 4:
+                self.y_velocity = 4
+            if self.y_velocity >= 0:
+                self.falling = True
+
         # update x position then check for collisions
         self.rect.x += self.x_velocity
-        # update y pos then check for collisions
-        self.rect.y += self.player_y_velocity
         # access collision test function to use colliderect
-        self.collision_test(tiles)
+        hit_list = self.collision_test(self.rect, tiles)
         # looks through the tiles that are being collided with
-        for tile in self.hit_list:
-            # if you are moving right and the tile is to your right then you must have hit the tile on its left so
-            # collision type is right
-            if self.moving_right and tile.left > self.rect.right:
+        for tile in hit_list:
+            # if you are moving right you must have hit the tile on the left so collision type is right
+            if self.moving_right:
                 # x position of the right side of the rect is made same as the left of the tile x pos so collision
-                self.rect.right = tile.left - 1
+                self.rect.right = tile.left
                 self.collision_types["right"] = True
                 # moving left so must have hit the tile on the right side of the rect so collision type is left
-            elif self.moving_left and tile.right < self.rect.left:
+            elif self.moving_left:
                 # x position of the left side of the rect is made same as the right side of the tile x pos so collision
-                self.rect.left = tile.right + 1
+                self.rect.left = tile.right
                 self.collision_types["left"] = True
-            if self.player_y_velocity < 0:  # going up...
-                if self.rect.top <= tile.bottom:  # ...and you've gone through tile
+        # update y pos then check for collisions again
+        self.rect.y += self.y_velocity
+        for tile in hit_list:
+            # if the y velocity less than 0 then going up so collision type must be top
+            if self.y_velocity < 0:
+                if self.rect.top <= tile.bottom:
                     # same as before but for a top collision
                     self.rect.top = tile.bottom + 1
                     self.collision_types["top"] = True
-                    self.player_y_velocity = 0
             # so if falling you must have hit the top of the tile so collision type bottom
-            elif self.player_y_velocity > 0:  # falling
-                if self.rect.bottom > tile.top:  # fallen through tile
+            if self.falling:
+                if self.rect.bottom > tile.top:
                     # same as before bottom rect is top tile
                     self.rect.bottom = tile.top
+                    self.y_velocity = 0
                     self.collision_types["bottom"] = True
-                    self.player_y_velocity = 0
-                    self.jumping = False
 
     def key_events(self, event):
         # key down section will allow for things to be toggled when key pressed down
@@ -138,16 +148,19 @@ class Player(pygame.sprite.DirtySprite):  # sprite class
             if event.key == self.right:
                 self.moving_right = True
                 self.x_velocity = 2
+                print(self.x_velocity)
             if event.key == self.left:
                 self.moving_left = True
                 self.x_velocity = -2
+                print(self.x_velocity)
             if event.key == self.down:
                 pass
             if event.key == self.up:
-                if not self.jumping and self.player_y_velocity > 0:
-                    self.jumping = True
-                    self.player_y_velocity = -6
-
+                print(self.y_velocity)
+                self.moving_up = True
+                self.falling = False
+                if self.air_timer < 6:
+                    self.y_velocity = -5
         # can un-toggle the stuff from key downs or bind to new toggles
         if event.type == KEYUP:
             if event.key == self.right:
@@ -163,10 +176,14 @@ class Player(pygame.sprite.DirtySprite):  # sprite class
             sys.exit()
 
 
+# rect_y = pygame.Rect(200, 107, 16, 16)
+
+
 def main():
     # create objects
     clock = pygame.time.Clock()
     screen = Screen(1360, 700)
+
     # players
     player_1 = Player(200, 100, "assets/player_1.png", pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w)
     player_2 = Player(250, 100, "assets/player_2.png", pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP)
@@ -174,11 +191,18 @@ def main():
     player_group.add(player_1, player_2)
 
     while True:
+
         clock.tick(60)
+
         screen.draw_map()
+
+        # pygame.draw.rect(screen.display, (255, 0, 0), rect_y)
+
         player_group.draw(screen.display)
-        player_1.move(screen)
-        player_2.move(screen)
+
+        player_1.move(tile_rects)
+        player_2.move(tile_rects)
+
         for event in pygame.event.get():
             player_1.key_events(event)
             player_2.key_events(event)
@@ -189,8 +213,8 @@ def main():
 
         screen.scale()
         screen.display.fill(steel_blue)
-        pygame.display.flip()
-        screen.tile_rects.clear()
+        tile_rects.clear()
+        pygame.display.update()
 
 
 if __name__ == "__main__":
