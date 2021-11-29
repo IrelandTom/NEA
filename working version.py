@@ -10,6 +10,8 @@ white = (255, 255, 255)
 black = (0, 0, 0)
 red = (255, 0, 0)
 steel_blue = (27, 51, 71)
+tongue_purple = (172, 61, 177)
+tongue_blue = (11, 205, 221)
 
 
 
@@ -47,11 +49,11 @@ class Map:
         for layer in self.game_map:
             x = 0
             for tile in layer:
-                if tile == '1':
+                if tile == "1":
                     screen.display.blit(block_1, (x * tile_size, y * tile_size))
-                if tile == '2':
+                if tile == "2":
                     screen.display.blit(block_2, (x * tile_size, y * tile_size))
-                if tile != '0':
+                if tile != "0":
                     self.tile_rects.append(pygame.Rect(x * tile_size, y * tile_size, tile_size, tile_size))
                 x += 1
             y += 1
@@ -59,7 +61,7 @@ class Map:
 
 class Player(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y, player_images, walking_images_left, walking_images_right, attack_images, key_left, key_right, key_down,
-                 key_up, key_attack):
+                 key_up, key_attack, tongue_colour):
         pygame.sprite.Sprite.__init__(self)
         self.image = player_images[0]
         self.images_list = player_images
@@ -81,12 +83,14 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.player_y_velocity = 0
         self.air_timer = 0
         self.x_velocity = 0
-        self.falling = False
         self.jumping = False
         self.animation_counter = 0
         self.frame_counter = 0
-        self.player_orientation = {"left": False, "right": False, "up": False, "down": False, "default": True}
+        self.player_orientation = {"left": False, "right": True, "up": False, "down": False, "default": True}
         self.collision_types = {"top": False, "bottom": False, "right": False, "left": False}
+        self.attack_rect = pygame.Rect(0, 0, 0, 0)
+        self.tongue_colour = tongue_colour
+        self.attack_delay = 0
 
     def colour_key(self):
         for item in self.walking_images_left:
@@ -120,8 +124,6 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.player_y_velocity += 0.3
         if self.player_y_velocity > 4:
             self.player_y_velocity = 4
-        if self.player_y_velocity >= 0:
-            self.falling = True
 
         # update x position then check for collisions
         self.rect.x += self.x_velocity
@@ -140,21 +142,21 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if self.moving_right and tile.left >= self.rect.right:
 
                 # x position of the right side of the rect is made same as the left of the tile x pos so collision
-                self.rect.right = tile.left - 1
+                self.rect.right = tile.left
                 self.collision_types["right"] = True
 
                 # moving left so must have hit the tile on the right side of the rect so collision type is left
             if self.moving_left and tile.right <= self.rect.left:
 
                 # x position of the left side of the rect is made same as the right side of the tile x pos so collision
-                self.rect.left = tile.right + 1
+                self.rect.left = tile.right
                 self.collision_types["left"] = True
 
             if self.player_y_velocity < 0:  # going up...
                 if self.rect.top <= tile.bottom:  # ...and you've gone through tile
 
                     # same as before but for a top collision
-                    self.rect.top = tile.bottom + 1
+                    self.rect.top = tile.bottom
                     self.collision_types["top"] = True
                     self.player_y_velocity = 0
 
@@ -174,7 +176,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if event.key == self.left:
                 self.moving_left = True
                 self.moving_right = False
-                self.x_velocity = -2
+                self.x_velocity = -1.1
                 self.player_orientation["default"] = False
                 self.player_orientation["right"] = False
                 self.player_orientation["left"] = True
@@ -224,7 +226,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         if self.player_orientation["left"]:
             self.frame_counter += 1
             if self.moving_left:
-                if self.frame_counter % 5 == 0:
+                if self.frame_counter % 4 == 0:
                     self.animation_counter = (self.animation_counter + 1) % len(self.walking_images_left)
                     self.image = self.walking_images_left[self.animation_counter]
             if not self.moving_left:
@@ -237,7 +239,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         if self.player_orientation["right"]:
             self.frame_counter += 1
             if self.moving_right:
-                if self.frame_counter % 5 == 0:
+                if self.frame_counter % 4 == 0:
                     self.animation_counter = (self.animation_counter + 1) % len(self.walking_images_right)
                     self.image = self.walking_images_right[self.animation_counter]
             if not self.moving_right:
@@ -245,8 +247,16 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if self.attacking:
                 self.image = self.images_attack[0]
 
-    def player_attack(self):
-        pass
+    def attack(self, surface):
+
+        if self.player_orientation["left"]:
+            if self.attacking:
+                self.attack_rect = pygame.Rect(self.rect.centerx - 51, self.rect.centery - 1, 50, 3)
+                pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
+        if self.player_orientation["right"]:
+            if self.attacking:
+                self.attack_rect = pygame.Rect(self.rect.centerx - 1, self.rect.centery - 1, 50, 3)
+                pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
 
 
 def main():
@@ -295,10 +305,12 @@ def main():
     player_2_attack_sequence = [pygame.image.load("assets/frog_p2_attack_right.png"),
                                 pygame.image.load("assets/frog_p2_attack_left.png") ]
 
-    player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right, player_1_attack_sequence, pygame.K_a,
-                      pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT)
-    player_2 = Player(250, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence, player_2_attack_sequence, pygame.K_LEFT,
-                      pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP, pygame.K_RSHIFT)
+    player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right,
+                      player_1_attack_sequence, pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT,
+                      tongue_purple)
+    player_2 = Player(250, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence,
+                      player_2_attack_sequence, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP,
+                      pygame.K_RSHIFT, tongue_blue)
     player_1.colour_key()
     player_2.colour_key()
     player_group = pygame.sprite.Group()
@@ -309,7 +321,8 @@ def main():
 
         clock.tick(fps)
         map.draw_map(screen)
-
+        player_1.attack(screen)
+        player_2.attack(screen)
         player_group.draw(screen.display)
         player_1.move(map.tile_rects, screen_rect)
         player_2.move(map.tile_rects, screen_rect)
