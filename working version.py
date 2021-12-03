@@ -59,14 +59,15 @@ class Map:
 
 
 class Player(pygame.sprite.Sprite):  # sprite class
-    def __init__(self, pos_x, pos_y, player_images, walking_images_left, walking_images_right, attack_images, key_left, key_right, key_down,
-                 key_up, key_attack, tongue_colour):
+    def __init__(self, pos_x, pos_y, player_images, walking_images_left, walking_images_right, attack_images, key_left,
+                 key_right, key_down, key_up, key_attack, tongue_colour, ducking_images):
         pygame.sprite.Sprite.__init__(self)
         self.image = player_images[0]
         self.images_list = player_images
         self.walking_images_left = walking_images_left
         self.walking_images_right = walking_images_right
-        self.images_attack = attack_images
+        self.ducking_images = ducking_images
+        self.attacking_images = attack_images
         self.rect = self.image.get_rect()
         self.rect.center = [pos_x, pos_y]
         self.left = key_left
@@ -83,6 +84,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.air_timer = 0
         self.x_velocity = 0
         self.jumping = False
+        self.ducking = False
         self.animation_counter = 0
         self.frame_counter = 0
         self.player_orientation = {"left": False, "right": True, "up": False, "down": False, "default": True}
@@ -97,11 +99,13 @@ class Player(pygame.sprite.Sprite):  # sprite class
 
 
     def colour_key(self):
+        for item in self.ducking_images:
+            self.images_list.append(item)
         for item in self.walking_images_left:
             self.images_list.append(item)
         for item in self.walking_images_right:
             self.images_list.append(item)
-        for item in self.images_attack:
+        for item in self.attacking_images:
             self.images_list.append(item)
         for image in self.images_list:
             image.set_colorkey(white)
@@ -118,7 +122,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         return self.hit_list, self.mini_hit_list
 
     def move(self, tiles, screen_rect):
-        # todo tidy this all up looks messy
+        # TODO clean this up since it looks messy
         self.collision_types["top"] = False
         self.collision_types["bottom"] = False
         self.collision_types["left"] = False
@@ -188,7 +192,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if event.key == self.left:
                 self.moving_left = True
                 self.moving_right = False
-                self.x_velocity = -1.1
+                self.x_velocity = -2
                 self.player_orientation["default"] = False
                 self.player_orientation["right"] = False
                 self.player_orientation["left"] = True
@@ -202,11 +206,19 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if event.key == self.up:
                 self.player_orientation["default"] = False
                 self.player_orientation["up"] = True
+                self.player_orientation["down"] = False
+                self.ducking = False
                 if not self.jumping:
                     if self.player_y_velocity > 0:
                         self.jumping = True
                         self.player_y_velocity = -5
-            if event.key == self.down:
+            if event.key == self.down and not self.jumping:
+                self.x_velocity = 0
+                self.moving_left = False
+                self.moving_right = False
+                self.ducking = True
+                self.player_orientation["left"] = False
+                self.player_orientation["right"] = False
                 self.player_orientation["default"] = False
                 self.player_orientation["down"] = True
             if event.key == self.right and self.attacking:
@@ -230,7 +242,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.player_orientation["up"] = False
                 self.player_orientation["default"] = True
             if event.key == self.down:
-                self.player_orientation["down"] = False
+                self.ducking = False
+                # self.player_orientation["down"] = False
                 self.player_orientation["default"] = True
             if event.key == self.attack_button:
                 self.attacking = False
@@ -249,7 +262,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if not self.moving_left:
                 self.image = self.images_list[1]
             if self.attacking:
-                self.image = self.images_attack[1]
+                self.image = self.attacking_images[1]
             if not self.attacking:
                 pass
 
@@ -262,14 +275,24 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if not self.moving_right:
                 self.image = self.images_list[0]
             if self.attacking:
-                self.image = self.images_attack[0]
+                self.image = self.attacking_images[0]
+
+        if self.player_orientation["down"]:
+            self.frame_counter += 1
+            if self.ducking:
+                if self.frame_counter % 5 == 0:
+                    self.animation_counter = (self.animation_counter + 1) % len(self.ducking_images)
+                    self.image = self.ducking_images[self.animation_counter]
+            if not self.ducking:
+                self.image = self.images_list[0]
+                self.player_orientation["down"] = False
 
     def attack(self, surface):
 
         if self.player_orientation["left"]:
             if self.attacking:
                 self.length += 3
-                self.attack_rect = pygame.Rect(self.rect.centerx - (self.max_tongue_length + 1), self.rect.centery - 1,
+                self.attack_rect = pygame.Rect(self.rect.centerx - self.length, self.rect.centery - 1,
                                                self.length, self.tongue_height)
                 pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
                 if self.length >= self.max_tongue_length:
@@ -282,23 +305,27 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
                 if self.length >= self.max_tongue_length:
                     self.length = self.max_tongue_length
+        if self.attack_rect.colliderect(self.rect):
+            self.health -= 25
 
 
-class Player_Stats:
+class PlayerStats:
     def __init__(self, images, healthbar_posx, healthbar_posy, health_rect_posx, health_rect_posy):
         self.stats_img_list = images
         self.health_rect = pygame.Rect(0, 0, 0, 0)
-        self.healthbar_height = 16
-        self.healthbar_width = 60
+        self.healthbar_height = 14
+        self.healthbar_width = 52
         self.healthbar_posx = healthbar_posx
         self.healthbar_posy = healthbar_posy
+        self.health_rect_posx = health_rect_posx
+        self.health_rect_posy = health_rect_posy
         for image in self.stats_img_list:
             image.set_colorkey(white)
 
     def health_stats(self, surface):
-        surface.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
-        self.health_rect = pygame.Rect()
-
+        surface.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
+        self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width, self.healthbar_height)
+        pygame.draw.rect(surface.display, red, self.health_rect)
 
 
 def main():
@@ -337,6 +364,7 @@ def main():
                                        pygame.image.load("assets/frog_p1_right_walk2.75.png"),
                                        pygame.image.load("assets/frog_p1_right_walk2.76.png"),
                                        pygame.image.load("assets/frog_p1_right_walk2.78.png")]
+    player_1_ducking_sequence = [pygame.image.load("assets/frog_p1_duck.png")]
     player_1_attack_sequence = [pygame.image.load("assets/frog_p1_attack_right.png"),
                                 pygame.image.load("assets/frog_p1_attack_left.png")]
 
@@ -347,16 +375,17 @@ def main():
                                  pygame.image.load("assets/frog_p2_left_walk2.png"),
                                  pygame.image.load("assets/frog_p2_right_walk1.png"),
                                  pygame.image.load("assets/frog_p2_right_walk2.png")]
+    player_2_ducking_sequence = [pygame.image.load("assets/frog_p2_duck.png")]
     player_2_attack_sequence = [pygame.image.load("assets/frog_p2_attack_right.png"),
                                 pygame.image.load("assets/frog_p2_attack_left.png")]
 
     # def the player class
     player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right,
                       player_1_attack_sequence, pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT,
-                      tongue_purple)
+                      tongue_purple, player_1_ducking_sequence)
     player_2 = Player(250, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence,
                       player_2_attack_sequence, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP,
-                      pygame.K_RSHIFT, tongue_blue)
+                      pygame.K_RSHIFT, tongue_blue, player_2_ducking_sequence)
     player_1.colour_key()
     player_2.colour_key()
     player_group = pygame.sprite.Group()
@@ -370,17 +399,18 @@ def main():
     screen_width = screen.display.get_width()
     screen_height = screen.display.get_height()
     print(screen_height)
-    stats_p1 = Player_Stats(stats_images, 5, 5, )
+    stats_p1 = PlayerStats(stats_images, 5, 5, (5 + 6), (5 + 1))
     # health bar is 64 pixels long
-    stats_p2 = Player_Stats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5))
+    stats_p2 = PlayerStats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5),
+                           ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1))
 
     while True:
 
         clock.tick(fps)
 
         map.draw_map(screen)
-        stats_p1.health_stats(screen.display)
-        stats_p2.health_stats(screen.display)
+        stats_p1.health_stats(screen)
+        stats_p2.health_stats(screen)
         player_1.attack(screen)
         player_2.attack(screen)
         player_group.draw(screen.display)
