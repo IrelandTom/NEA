@@ -305,6 +305,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
                 if self.length >= self.max_tongue_length:
                     self.length = self.max_tongue_length
+        if self.attack_rect.colliderect(self.rect):
+            self.health -= 25
 
 
 class PlayerStats:
@@ -322,8 +324,7 @@ class PlayerStats:
 
     def health_stats(self, surface):
         surface.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
-        self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width,
-                                       self.healthbar_height)
+        self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width, self.healthbar_height)
         pygame.draw.rect(surface.display, red, self.health_rect)
 
 
@@ -402,23 +403,14 @@ def main():
     # health bar is 64 pixels long
     stats_p2 = PlayerStats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5),
                            ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1))
-    invincibility_timer = 40
-    def damage_detection(player_a, player_b, invincibility_timer):
-        print(invincibility_timer)
-        if player_a.attack_rect.colliderect(player_b.rect) and invincibility_timer == 0:
-            player_b.health -= 25
-            invincibility_timer = 40
-            print(player_b.health)
 
     while True:
-        invincibility_timer -= 1
+
         clock.tick(fps)
 
         map.draw_map(screen)
         stats_p1.health_stats(screen)
         stats_p2.health_stats(screen)
-        damage_detection(player_1, player_2, invincibility_timer)
-        damage_detection(player_2, player_1, invincibility_timer)
         player_1.attack(screen)
         player_2.attack(screen)
         player_group.draw(screen.display)
