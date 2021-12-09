@@ -4,7 +4,7 @@ import random
 from pygame.locals import *
 
 pygame.init()
-
+FPS = 60
 # colours easy access
 white = (255, 255, 255)
 black = (0, 0, 0)
@@ -98,7 +98,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.attack_timer = 0
         self.health = 100
         self.hit_bool = False
-        self.invincibility = True
+        self.invincibility_timer = 0
+        self.healthbar_decreaser = False
 
     def colour_key(self):
         for item in self.ducking_images:
@@ -253,9 +254,14 @@ class Player(pygame.sprite.Sprite):  # sprite class
         if event.type == user_event:
             self.health -= 25
             print(self.health)
-        if event.type == pygame.QUIT or self.health == 0:
+        if event.type == pygame.QUIT:
             pygame.quit()
-            sys.exit("goodbye idiot hope you enjoyed this mess of a game but you should carry on playing shouldn't you")
+            sys.exit("goodbye hope you enjoyed this mess of a game but you should carry on playing shouldn't you,"
+                     " PLAY MORE MORE MORE!!!!!!")
+        if self.health == 0:
+            pygame.quit()
+            sys.exit("LOSER YOU LOST ALL (100%) YOUR HEALTH HAHAHAHAHAHAHAHAHAHAH YOU HAVE NO HEALTH, NADA, NOTHING, "
+                     "ZILCH, POSITIVELY NOTHING, INFINITESIMALLY SMALL HEALTH,\n kinda sucks doesn't it. :........(")
 
     def player_animations(self):
         if self.player_orientation["left"]:
@@ -304,6 +310,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
                 if self.length >= self.max_tongue_length:
                     self.length = self.max_tongue_length
+            if not self.attacking:
+                self.attack_rect = pygame.Rect(0, 0, 0, 0)
         if self.player_orientation["right"]:
             if self.attacking:
                 self.length += 3
@@ -312,18 +320,27 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
                 if self.length >= self.max_tongue_length:
                     self.length = self.max_tongue_length
+            if not self.attacking:
+                self.attack_rect = pygame.Rect(0, 0, 0, 0)
 
     def hit_detector(self, opponent, user_event):
         # TODO sort out damage
-        if self.attack_rect.colliderect(opponent.rect):
+        # if the rect of the tongue hits the player rect
+        if self.attack_rect.colliderect(opponent.rect) and self.invincibility_timer == 0:
             self.hit_bool = True
+            # make the player invincible after they have been hit
+            self.invincibility_timer = FPS
         if self.hit_bool:
+            # post the event that the player has been hit (event will make player lose health)
             pygame.event.post(pygame.event.Event(user_event))
             self.hit_bool = False
+            self.healthbar_decreaser = True
+        if self.invincibility_timer > 0:
+            self.invincibility_timer -= 1
 
 
 class PlayerStats:
-    def __init__(self, images, healthbar_posx, healthbar_posy, health_rect_posx, health_rect_posy, player_dmged):
+    def __init__(self, images, healthbar_posx, healthbar_posy, health_rect_posx, health_rect_posy):
         self.stats_img_list = images
         self.health_rect = pygame.Rect(0, 0, 0, 0)
         self.healthbar_height = 14
@@ -333,22 +350,23 @@ class PlayerStats:
         self.healthbar_posy = healthbar_posy
         self.health_rect_posx = health_rect_posx
         self.health_rect_posy = health_rect_posy
-        self.player_dmg = player_dmged
         for image in self.stats_img_list:
             image.set_colorkey(white)
 
-    def health_stats(self, surface):
+    def health_stats(self, surface, player):
         surface.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
         self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width,
                                        self.healthbar_height)
-
+        if player.healthbar_decreaser:
+            self.healthbar_width -= self.healthbar_width_div_4
+            player.healthbar_decreaser = False
         pygame.draw.rect(surface.display, red, self.health_rect)
 
 
 def main():
 
     # create objects
-    fps = 60
+
     clock = pygame.time.Clock()
     screen = Screen(1377, 705)
     screen_rect = screen.display.get_rect()
@@ -400,7 +418,7 @@ def main():
     player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right,
                       player_1_attack_sequence, pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT,
                       tongue_purple, player_1_ducking_sequence)
-    player_2 = Player(250, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence,
+    player_2 = Player(500, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence,
                       player_2_attack_sequence, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP,
                       pygame.K_RSHIFT, tongue_blue, player_2_ducking_sequence)
     player_1.colour_key()
@@ -420,19 +438,18 @@ def main():
     screen_width = screen.display.get_width()
     screen_height = screen.display.get_height()
     print(screen_height)
-    stats_p1 = PlayerStats(stats_images, 5, 5, (5 + 6), (5 + 1), player_1_hit)
+    stats_p1 = PlayerStats(stats_images, 5, 5, (5 + 6), (5 + 1))
     # health bar is 64 pixels long
     stats_p2 = PlayerStats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5),
-                           ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1), player_2_hit)
-
+                           ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1))
 
     while True:
 
-        clock.tick(fps)
+        clock.tick(FPS)
 
         map.draw_map(screen)
-        stats_p1.health_stats(screen)
-        stats_p2.health_stats(screen)
+        stats_p1.health_stats(screen, player_1)
+        stats_p2.health_stats(screen, player_2)
         player_1.attack(screen)
         player_2.attack(screen)
         player_1.hit_detector(player_2, player_2_hit)
@@ -441,7 +458,6 @@ def main():
         player_1.move(map.tile_rects, screen_rect)
         player_2.move(map.tile_rects, screen_rect)
         for event in pygame.event.get():
-            print(pygame.event)
             player_1.key_events(event, player_2_hit)
             player_2.key_events(event, player_1_hit)
         player_1.player_animations()
