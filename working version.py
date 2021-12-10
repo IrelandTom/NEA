@@ -217,6 +217,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
                         self.player_y_velocity = -5
             if event.key == self.down and not self.jumping:
                 self.x_velocity = 0
+
                 self.moving_left = False
                 self.moving_right = False
                 self.ducking = True
@@ -326,7 +327,9 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def hit_detector(self, opponent, user_event):
         # TODO sort out damage
         # if the rect of the tongue hits the player rect
-        if self.attack_rect.colliderect(opponent.rect) and self.invincibility_timer == 0:
+        opp_hitbox_rect = pygame.Rect(opponent.rect.x, opponent.rect.y, opponent.rect.width, opponent.rect.height)
+        # TODO sort out if ducking and stuff
+        if self.attack_rect.colliderect(opp_hitbox_rect) and self.invincibility_timer == 0:
             self.hit_bool = True
             # make the player invincible after they have been hit
             self.invincibility_timer = FPS
@@ -350,10 +353,12 @@ class PlayerStats:
         self.healthbar_posy = healthbar_posy
         self.health_rect_posx = health_rect_posx
         self.health_rect_posy = health_rect_posy
+        self.font = pygame.font.Font(None, 10)
         for image in self.stats_img_list:
             image.set_colorkey(white)
 
     def health_stats(self, surface, player):
+        # will display the healthbar graphic and the animated red rectangle which displays the player's health
         surface.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
         self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width,
                                        self.healthbar_height)
@@ -361,6 +366,11 @@ class PlayerStats:
             self.healthbar_width -= self.healthbar_width_div_4
             player.healthbar_decreaser = False
         pygame.draw.rect(surface.display, red, self.health_rect)
+
+    def other_stats(self, screen, player):
+        # displays how long the player is invincible for
+        invincibility_stats = self.font.render("invincible " + str(player.invincibility_timer), 1, red)
+        screen.blit(invincibility_stats, (self.healthbar_posx, self.healthbar_posy + 30))
 
 
 def main():
@@ -448,8 +458,10 @@ def main():
         clock.tick(FPS)
 
         map.draw_map(screen)
-        stats_p1.health_stats(screen, player_1)
-        stats_p2.health_stats(screen, player_2)
+        stats_p1.health_stats(screen, player_2)
+        stats_p2.health_stats(screen, player_1)
+        stats_p1.other_stats(screen.display, player_2)
+        stats_p2.other_stats(screen.display, player_1)
         player_1.attack(screen)
         player_2.attack(screen)
         player_1.hit_detector(player_2, player_2_hit)
