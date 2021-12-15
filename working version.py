@@ -4,6 +4,7 @@ import random
 from pygame.locals import *
 
 pygame.init()
+
 FPS = 60
 # colours easy access
 white = (255, 255, 255)
@@ -12,14 +13,23 @@ red = (255, 0, 0)
 steel_blue = (27, 51, 71)
 tongue_purple = (172, 61, 177)
 tongue_blue = (11, 205, 221)
+green = (10, 161, 126)
+pink = (245, 94, 129)
+# TODO, do some comments
+# TODO, dodge mechanic
+# TODO, add some sound effects
+# TODO, add different attacks
+# TODO, sort out p2 walking animations and also animations for when walking and attacking
+# TODO, make it so that when a player looses their health they die
+# TODO, title screen
 
 
 class Screen:
-    def __init__(self, width, height):
+    def __init__(self, width, height, caption):
         self.window_size = (width, height)
         self.screen = pygame.display.set_mode(self.window_size)
+        self.caption = pygame.display.set_caption(caption)
         self.display = pygame.Surface((width // 2, height // 2))
-
     def scale(self):
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
@@ -60,16 +70,18 @@ class Map:
 
 class Player(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y, player_images, walking_images_left, walking_images_right, attack_images, key_left,
-                 key_right, key_down, key_up, key_attack, tongue_colour, ducking_images):
+                 key_right, key_down, key_up, key_attack, tongue_colour, ducking_images, name):
         pygame.sprite.Sprite.__init__(self)
-        self.image = player_images[0]
+        self.image = player_images[2]
         self.images_list = player_images
         self.walking_images_left = walking_images_left
         self.walking_images_right = walking_images_right
         self.ducking_images = ducking_images
         self.attacking_images = attack_images
         self.rect = self.image.get_rect()
-        self.rect.center = [pos_x, pos_y]
+        self.pos_x = pos_x
+        self.pos_y = pos_y
+        self.rect.center = [self.pos_x, self.pos_y]
         self.left = key_left
         self.right = key_right
         self.down = key_down
@@ -100,6 +112,11 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.hit_bool = False
         self.invincibility_timer = 0
         self.healthbar_decreaser = False
+        self.dodging = False
+        self.lives = 2
+        self.loser = False
+        self.winner = False
+        self.name = name
 
     def colour_key(self):
         for item in self.ducking_images:
@@ -125,12 +142,9 @@ class Player(pygame.sprite.Sprite):  # sprite class
         return self.hit_list, self.mini_hit_list
 
     def move(self, tiles, screen_rect):
-        # TODO clean this up since it looks messy
-        self.collision_types["top"] = False
-        self.collision_types["bottom"] = False
-        self.collision_types["left"] = False
-        self.collision_types["right"] = False
-        # __________________________________ #
+        # TODO get collisions working fully!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        for item in self.collision_types:
+            item = False
 
         # making sure the player can't move off the screen
         self.rect.clamp_ip(screen_rect)
@@ -189,7 +203,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if self.attack_rect.right == tile.left:
                 self.attack_rect.right = tile.left
 
-    def key_events(self, event, user_event):
+    def key_events(self, event, user_event, opponent):
         # key down section will allow for things to be toggled when key pressed down
         if event.type == KEYDOWN:
             if event.key == self.left:
@@ -217,7 +231,6 @@ class Player(pygame.sprite.Sprite):  # sprite class
                         self.player_y_velocity = -5
             if event.key == self.down and not self.jumping:
                 self.x_velocity = 0
-
                 self.moving_left = False
                 self.moving_right = False
                 self.ducking = True
@@ -231,7 +244,16 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.attacking = False
             if event.key == self.attack_button:
                 self.attacking = True
-
+            if event.key == pygame.K_RETURN and self.winner or self.loser:
+                self.lives = 3
+                opponent.lives = 3
+                self.health = 100
+                opponent.health = 100
+                self.loser = False
+                opponent.loser = False
+                self.winner = False
+                opponent.winner = False
+                self.rect.center = [self.pos_x, self.pos_y]
         # can un-toggle the stuff from key downs or bind to new toggles
         if event.type == KEYUP:
             if event.key == self.left:
@@ -246,6 +268,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.player_orientation["up"] = False
                 self.player_orientation["default"] = True
             if event.key == self.down:
+                self.rect = self.rect
                 self.ducking = False
                 # self.player_orientation["down"] = False
                 self.player_orientation["default"] = True
@@ -254,15 +277,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.length = 0
         if event.type == user_event:
             self.health -= 25
-            print(self.health)
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit("goodbye hope you enjoyed this mess of a game but you should carry on playing shouldn't you,"
                      " PLAY MORE MORE MORE!!!!!!")
-        if self.health == 0:
-            pygame.quit()
-            sys.exit("LOSER YOU LOST ALL (100%) YOUR HEALTH HAHAHAHAHAHAHAHAHAHAH YOU HAVE NO HEALTH, NADA, NOTHING, "
-                     "ZILCH, POSITIVELY NOTHING, INFINITESIMALLY SMALL HEALTH,\n kinda sucks doesn't it. :........(")
 
     def player_animations(self):
         if self.player_orientation["left"]:
@@ -290,7 +308,6 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.image = self.attacking_images[0]
 
         if self.player_orientation["down"]:
-            # TODO sort out hitbox
             self.frame_counter += 1
             if self.ducking:
                 if self.frame_counter % 5 == 0:
@@ -302,7 +319,6 @@ class Player(pygame.sprite.Sprite):  # sprite class
 
     def attack(self, surface):
 
-        # TODO deal with time that attack_rect is allowed on the screen
         if self.player_orientation["left"]:
             if self.attacking:
                 self.length += 3
@@ -325,11 +341,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.attack_rect = pygame.Rect(0, 0, 0, 0)
 
     def hit_detector(self, opponent, user_event):
-        # TODO sort out damage
         # if the rect of the tongue hits the player rect
         opp_hitbox_rect = pygame.Rect(opponent.rect.x, opponent.rect.y, opponent.rect.width, opponent.rect.height)
-        # TODO sort out if ducking and stuff
-        if self.attack_rect.colliderect(opp_hitbox_rect) and self.invincibility_timer == 0:
+        # TODO sort out ducking hitbox, ducking works but for future adaptability ducking should use a smaller hitbox
+        if self.attack_rect.colliderect(opp_hitbox_rect) and self.invincibility_timer == 0 and not opponent.ducking:
             self.hit_bool = True
             # make the player invincible after they have been hit
             self.invincibility_timer = FPS
@@ -340,6 +355,33 @@ class Player(pygame.sprite.Sprite):  # sprite class
             self.healthbar_decreaser = True
         if self.invincibility_timer > 0:
             self.invincibility_timer -= 1
+
+    def death(self, opponent):
+        if opponent.health <= 0:
+            opponent.lives -= 1
+            opponent.health = 100
+            self.rect.center = [self.pos_x, self.pos_y]
+        if opponent.lives <= 0:
+            opponent.lives = 0
+            opponent.health = 0
+            opponent.loser = True
+        if opponent.loser:
+            opponent.winner = True
+
+
+class HandleWinning:
+    def __init__(self, player):
+        self.font = pygame.font.Font("freesansbold.ttf", 15)
+        self.player = player
+
+    def winner_screen(self, screen, colour):
+        if self.player.winner:
+            screen.display.fill(colour)
+            winner_text = self.font.render(self.player.name + " Won!", 1, red)
+            screen.display.blit(winner_text, (screen.display.get_width() // 2 - 60, screen.display.get_height() // 2))
+            resume_text = self.font.render("press enter to play again", 1, red)
+            screen.display.blit(resume_text,
+                                (screen.display.get_width() // 2 - 60, screen.display.get_height() // 2 + 30))
 
 
 class PlayerStats:
@@ -353,24 +395,29 @@ class PlayerStats:
         self.healthbar_posy = healthbar_posy
         self.health_rect_posx = health_rect_posx
         self.health_rect_posy = health_rect_posy
-        self.font = pygame.font.Font(None, 10)
+        self.font = pygame.font.Font("freesansbold.ttf", 10)
         for image in self.stats_img_list:
             image.set_colorkey(white)
 
-    def health_stats(self, surface, player):
+    def health_stats(self, screen, player):
         # will display the healthbar graphic and the animated red rectangle which displays the player's health
-        surface.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
+        screen.display.blit(self.stats_img_list[0], (self.healthbar_posx, self.healthbar_posy))
         self.health_rect = pygame.Rect(self.health_rect_posx, self.health_rect_posy, self.healthbar_width,
                                        self.healthbar_height)
         if player.healthbar_decreaser:
             self.healthbar_width -= self.healthbar_width_div_4
             player.healthbar_decreaser = False
-        pygame.draw.rect(surface.display, red, self.health_rect)
+        if player.health == 0 and player.lives > 0:
+            self.healthbar_width = 52
+        pygame.draw.rect(screen.display, red, self.health_rect)
 
     def other_stats(self, screen, player):
         # displays how long the player is invincible for
         invincibility_stats = self.font.render("invincible " + str(player.invincibility_timer), 1, red)
         screen.blit(invincibility_stats, (self.healthbar_posx, self.healthbar_posy + 30))
+        # displays how many lives the player has left
+        lives_stats = self.font.render("lives " + str(player.lives), 1, red)
+        screen.blit(lives_stats, (self.healthbar_posx, self.healthbar_posy + 60))
 
 
 def main():
@@ -378,7 +425,7 @@ def main():
     # create objects
 
     clock = pygame.time.Clock()
-    screen = Screen(1377, 705)
+    screen = Screen(1377, 705, "Froggy Fighters")
     screen_rect = screen.display.get_rect()
 
     # Map loading
@@ -387,7 +434,8 @@ def main():
 
     # players
     # player1 images lists
-    player_1_images = [pygame.image.load("assets/frog_p1_right.png"), pygame.image.load("assets/frog_p1_left.png")]
+    player_1_images = [pygame.image.load("assets/frog_p1_right.png"), pygame.image.load("assets/frog_p1_left.png"),
+                       pygame.image.load("assets/dead_img.png")]
     player_1_walking_sequence_left = [pygame.image.load("assets/frog_p1_left_walk1.0.png"),
                                       pygame.image.load("assets/frog_p1_left_walk1.25.png"),
                                       pygame.image.load("assets/frog_p1_left_walk1.50.png"),
@@ -414,7 +462,8 @@ def main():
                                 pygame.image.load("assets/frog_p1_attack_left.png")]
 
     # player2 images lists
-    player_2_images = [pygame.image.load("assets/frog_p2_right.png"), pygame.image.load("assets/frog_p2_left.png")]
+    player_2_images = [pygame.image.load("assets/frog_p2_right.png"), pygame.image.load("assets/frog_p2_left.png"),
+                       pygame.image.load("assets/dead_img.png")]
 
     player_2_walking_sequence = [pygame.image.load("assets/frog_p2_left_walk1.png"),
                                  pygame.image.load("assets/frog_p2_left_walk2.png"),
@@ -427,10 +476,10 @@ def main():
     # def the player class
     player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right,
                       player_1_attack_sequence, pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT,
-                      tongue_purple, player_1_ducking_sequence)
+                      tongue_purple, player_1_ducking_sequence, "Green Froggy")
     player_2 = Player(500, 100, player_2_images, player_2_walking_sequence, player_2_walking_sequence,
                       player_2_attack_sequence, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_DOWN, pygame.K_UP,
-                      pygame.K_RSHIFT, tongue_blue, player_2_ducking_sequence)
+                      pygame.K_RSHIFT, tongue_blue, player_2_ducking_sequence, "Pink Froggy")
     player_1.colour_key()
     player_2.colour_key()
     player_group = pygame.sprite.Group()
@@ -447,11 +496,13 @@ def main():
     # def the stats class
     screen_width = screen.display.get_width()
     screen_height = screen.display.get_height()
-    print(screen_height)
     stats_p1 = PlayerStats(stats_images, 5, 5, (5 + 6), (5 + 1))
     # health bar is 64 pixels long
     stats_p2 = PlayerStats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5),
                            ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1))
+    # winning_stuff
+    handle_winning_p1 = HandleWinning(player_1)
+    handle_winning_p2 = HandleWinning(player_2)
 
     while True:
 
@@ -469,11 +520,16 @@ def main():
         player_group.draw(screen.display)
         player_1.move(map.tile_rects, screen_rect)
         player_2.move(map.tile_rects, screen_rect)
+        player_1.death(player_2)
+        player_2.death(player_1)
         for event in pygame.event.get():
-            player_1.key_events(event, player_2_hit)
-            player_2.key_events(event, player_1_hit)
+            player_1.key_events(event, player_2_hit, player_2)
+            player_2.key_events(event, player_1_hit, player_1)
+
         player_1.player_animations()
         player_2.player_animations()
+        handle_winning_p1.winner_screen(screen, green)
+        handle_winning_p2.winner_screen(screen, pink)
         screen.scale()
         map.tile_rects.clear()
         screen.display.fill(steel_blue)
