@@ -203,7 +203,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if self.attack_rect.right == tile.left:
                 self.attack_rect.right = tile.left
 
-    def key_events(self, event, user_event, opponent):
+    def events(self, event, user_event, opponent):
         # key down section will allow for things to be toggled when key pressed down
         if event.type == KEYDOWN:
             if event.key == self.left:
@@ -523,8 +523,8 @@ def main():
         player_1.death(player_2)
         player_2.death(player_1)
         for event in pygame.event.get():
-            player_1.key_events(event, player_2_hit, player_2)
-            player_2.key_events(event, player_1_hit, player_1)
+            player_1.events(event, player_2_hit, player_2)
+            player_2.events(event, player_1_hit, player_1)
 
         player_1.player_animations()
         player_2.player_animations()
