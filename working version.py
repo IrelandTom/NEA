@@ -15,11 +15,10 @@ tongue_purple = (172, 61, 177)
 tongue_blue = (11, 205, 221)
 green = (10, 161, 126)
 pink = (245, 94, 129)
-# TODO, do some comments
 # TODO, dodge mechanic
 # TODO, add some sound effects
 # TODO, add different attacks
-# TODO, sort out p2 walking animations and also animations for when walking and attacking
+# TODO, sort out animations for when walking and attacking at the same time
 # TODO, make it so that when a player looses their health they die
 # TODO, title screen
 
@@ -30,18 +29,19 @@ class Screen:
         self.screen = pygame.display.set_mode(self.window_size)
         self.caption = pygame.display.set_caption(caption)
         self.display = pygame.Surface((width // 2, height // 2))
-    def scale(self):
+
+    def scale(self):  # scales the screen to a more suitable size to allow for better representation of pixel art
         new_surface = pygame.transform.scale(self.display, self.window_size)
         self.screen.blit(new_surface, (0, 0))
 
 
-class Map:
+class Map:  # separate map class allows for future map development. this makes it easy for developers to add new maps
     def __init__(self, map_file):
         self.map_file = map_file
         self.tile_rects = []
         self.game_map = []
 
-    def load_map(self):  # below function taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
+    def load_map(self):  # below function adapted from: https://www.youtube.com/watch?v=5q7tmIlXROg
         file = open(self.map_file)
         data = file.read()
         file.close()
@@ -50,7 +50,7 @@ class Map:
             self.game_map.append(list(row))
         return self.game_map
 
-    def draw_map(self, screen):  # taken from: https://www.youtube.com/watch?v=5q7tmIlXROg
+    def draw_map(self, screen):  # adapted from: https://www.youtube.com/watch?v=5q7tmIlXROg
         tile_size = 16
         block_1 = pygame.image.load("assets/test_block1.png")
         block_2 = pygame.image.load("assets/test_block2.png")
@@ -72,42 +72,57 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def __init__(self, pos_x, pos_y, player_images, walking_images_left, walking_images_right, attack_images, key_left,
                  key_right, key_down, key_up, key_attack, tongue_colour, ducking_images, name):
         pygame.sprite.Sprite.__init__(self)
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # images section
         self.image = player_images[2]
         self.images_list = player_images
         self.walking_images_left = walking_images_left
         self.walking_images_right = walking_images_right
         self.ducking_images = ducking_images
         self.attacking_images = attack_images
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # rect and position of player
         self.rect = self.image.get_rect()
         self.pos_x = pos_x
         self.pos_y = pos_y
         self.rect.center = [self.pos_x, self.pos_y]
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # defining the keys
         self.left = key_left
         self.right = key_right
         self.down = key_down
         self.up = key_up
         self.attack_button = key_attack
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # movement Bools
         self.attacking = False
         self.moving_right = False
         self.moving_left = False
         self.moving_up = True
+        self.jumping = False
+        self.ducking = False
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
         self.hit_list = []
         self.player_y_velocity = 0
         self.air_timer = 0
         self.x_velocity = 0
-        self.jumping = False
-        self.ducking = False
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # animation
         self.animation_counter = 0
         self.frame_counter = 0
         self.player_orientation = {"left": False, "right": True, "up": False, "down": False, "default": True}
         self.collision_types = {"top": False, "bottom": False, "right": False, "left": False}
         self.attack_rect = pygame.Rect(0, 0, 0, 0)
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # attacking
         self.tongue_colour = tongue_colour
         self.length = 0
         self.mini_hit_list = []
         self.max_tongue_length = 50
         self.tongue_height = 3
         self.attack_timer = 0
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+        # health and other stats
         self.health = 100
         self.hit_bool = False
         self.invincibility_timer = 0
@@ -117,8 +132,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.loser = False
         self.winner = False
         self.name = name
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-    def colour_key(self):
+    def colour_key(self):  # creates a greenscreen effect that removes all the white colour on images
+        # loops through all lists of images given then appends them to a larger list
         for item in self.ducking_images:
             self.images_list.append(item)
         for item in self.walking_images_left:
@@ -127,6 +144,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             self.images_list.append(item)
         for item in self.attacking_images:
             self.images_list.append(item)
+        # after all the images are accounted for, the white screen can be used on all of them
         for image in self.images_list:
             image.set_colorkey(white)
 
@@ -134,21 +152,20 @@ class Player(pygame.sprite.Sprite):  # sprite class
         # takes list of all tile rects then checks if they have collided with the players
         self.hit_list = []
         self.mini_hit_list = []
-        for tile in tiles:
-            if self.rect.colliderect(tile):
+        for tile in tiles:  # each tile in the list tile is a rect, this gives python the data to use colliderect()
+            if self.rect.colliderect(tile):  # inbuilt function that tests for rect collisions
                 self.hit_list.append(tile)
             if self.attack_rect.colliderect(tile):
                 self.mini_hit_list.append(tile)
-        return self.hit_list, self.mini_hit_list
+        return self.hit_list, self.mini_hit_list  # return the lists of collisions for later use
 
     def move(self, tiles, screen_rect):
-        # TODO get collisions working fully!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        for item in self.collision_types:
-            item = False
 
         # making sure the player can't move off the screen
         self.rect.clamp_ip(screen_rect)
 
+        # gravity. After the player has jumped they experience a constant acceleration towards the ground resulting
+        # in a simple simulation of gravity
         self.player_y_velocity += 0.3
         if self.player_y_velocity > 4:
             self.player_y_velocity = 4
@@ -198,7 +215,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
                     self.player_y_velocity = 0
                     self.jumping = False
 
-        for tile in self.mini_hit_list:
+        for tile in self.mini_hit_list:  # an attempt at having collisions work for the tongues
 
             if self.attack_rect.right == tile.left:
                 self.attack_rect.right = tile.left
@@ -206,21 +223,23 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def events(self, event, user_event, opponent):
         # key down section will allow for things to be toggled when key pressed down
         if event.type == KEYDOWN:
-            if event.key == self.left:
+            if event.key == self.left:  # pressed left
                 self.moving_left = True
                 self.moving_right = False
                 self.x_velocity = -2
                 self.player_orientation["default"] = False
                 self.player_orientation["right"] = False
                 self.player_orientation["left"] = True
-            if event.key == self.right:
+
+            if event.key == self.right:  # pressed right
                 self.moving_right = True
                 self.moving_left = False
                 self.x_velocity = 2
                 self.player_orientation["default"] = False
                 self.player_orientation["left"] = False
                 self.player_orientation["right"] = True
-            if event.key == self.up:
+
+            if event.key == self.up:  # pressed up key
                 self.player_orientation["default"] = False
                 self.player_orientation["up"] = True
                 self.player_orientation["down"] = False
@@ -229,7 +248,8 @@ class Player(pygame.sprite.Sprite):  # sprite class
                     if self.player_y_velocity > 0:
                         self.jumping = True
                         self.player_y_velocity = -5
-            if event.key == self.down and not self.jumping:
+
+            if event.key == self.down and not self.jumping:  # pressed down key. (can't duck when jumping)
                 self.x_velocity = 0
                 self.moving_left = False
                 self.moving_right = False
@@ -238,13 +258,21 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.player_orientation["right"] = False
                 self.player_orientation["default"] = False
                 self.player_orientation["down"] = True
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+            # can't attack if you walk first
             if event.key == self.right and self.attacking:
                 self.attacking = False
+
             if event.key == self.left and self.attacking:
                 self.attacking = False
-            if event.key == self.attack_button:
+
+            # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+            if event.key == self.attack_button:  # released attack key
                 self.attacking = True
-            if event.key == pygame.K_RETURN and self.winner or self.loser:
+
+            if event.key == pygame.K_RETURN and self.winner or self.loser:  # end screen, detects if the player has
+                # pressed enter
                 self.lives = 3
                 opponent.lives = 3
                 self.health = 100
@@ -254,40 +282,47 @@ class Player(pygame.sprite.Sprite):  # sprite class
                 self.winner = False
                 opponent.winner = False
                 self.rect.center = [self.pos_x, self.pos_y]
-        # can un-toggle the stuff from key downs or bind to new toggles
+
+        # can un-toggle the Bools from key downs or bind to new toggles
         if event.type == KEYUP:
-            if event.key == self.left:
+            if event.key == self.left:  # released left key
                 self.x_velocity = 0
                 self.moving_left = False
                 self.player_orientation["default"] = True
-            if event.key == self.right:
+
+            if event.key == self.right:  # released right key
                 self.x_velocity = 0
                 self.moving_right = False
                 self.player_orientation["default"] = True
-            if event.key == self.up:
+
+            if event.key == self.up:  # released up key
                 self.player_orientation["up"] = False
                 self.player_orientation["default"] = True
-            if event.key == self.down:
+
+            if event.key == self.down:  # released down key
                 self.rect = self.rect
                 self.ducking = False
-                # self.player_orientation["down"] = False
                 self.player_orientation["default"] = True
-            if event.key == self.attack_button:
+
+            if event.key == self.attack_button:  # released attack key
                 self.attacking = False
                 self.length = 0
-        if event.type == user_event:
+
+        if event.type == user_event:  # user event is when the opponent player has been hit
             self.health -= 25
         if event.type == pygame.QUIT:
             pygame.quit()
-            sys.exit("goodbye hope you enjoyed this mess of a game but you should carry on playing shouldn't you,"
-                     " PLAY MORE MORE MORE!!!!!!")
+            sys.exit("goodbye hope you enjoyed this game!")
 
     def player_animations(self):
-        if self.player_orientation["left"]:
-            self.frame_counter += 1
+
+        if self.player_orientation["left"]:  # section for the player animations for moving left
+            self.frame_counter += 1  # used to slow down animation sequence
             if self.moving_left:
-                if self.frame_counter % 4 == 0:
+                if self.frame_counter % 4 == 0:  # every 4th frame change the image
                     self.animation_counter = (self.animation_counter + 1) % len(self.walking_images_left)
+                    # count up to the length of the list of images, then divide the subsequent numbers by the
+                    # length of the length of the list. this allows for a constant loop that always returns to 0
                     self.image = self.walking_images_left[self.animation_counter]
             if not self.moving_left:
                 self.image = self.images_list[1]
@@ -296,7 +331,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if not self.attacking:
                 pass
 
-        if self.player_orientation["right"]:
+        if self.player_orientation["right"]:  # same as the above but for a different orientation
             self.frame_counter += 1
             if self.moving_right:
                 if self.frame_counter % 4 == 0:
@@ -307,10 +342,10 @@ class Player(pygame.sprite.Sprite):  # sprite class
             if self.attacking:
                 self.image = self.attacking_images[0]
 
-        if self.player_orientation["down"]:
+        if self.player_orientation["down"]:  # ducking sequence with plans for a full duck animation
             self.frame_counter += 1
             if self.ducking:
-                if self.frame_counter % 5 == 0:
+                if self.frame_counter % 5 == 0:  # same as previous
                     self.animation_counter = (self.animation_counter + 1) % len(self.ducking_images)
                     self.image = self.ducking_images[self.animation_counter]
             if not self.ducking:
@@ -319,17 +354,18 @@ class Player(pygame.sprite.Sprite):  # sprite class
 
     def attack(self, surface):
 
-        if self.player_orientation["left"]:
+        if self.player_orientation["left"]:  # attacking while facing left
             if self.attacking:
-                self.length += 3
+                self.length += 3  # increment the length of the tongue by a small fraction every frame
                 self.attack_rect = pygame.Rect(self.rect.centerx - self.length, self.rect.centery - 1,
-                                               self.length, self.tongue_height)
-                pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)
-                if self.length >= self.max_tongue_length:
+                                               self.length, self.tongue_height)  # set up the size of the tongue
+                pygame.draw.rect(surface.display, self.tongue_colour, self.attack_rect)  # draw the tongue
+                if self.length >= self.max_tongue_length:  # set a maximum length for the tongue
                     self.length = self.max_tongue_length
             if not self.attacking:
-                self.attack_rect = pygame.Rect(0, 0, 0, 0)
-        if self.player_orientation["right"]:
+                self.attack_rect = pygame.Rect(0, 0, 0, 0)  # when the player is not attacking make the rect disappear
+
+        if self.player_orientation["right"]:  # same but for a different player orientation
             if self.attacking:
                 self.length += 3
                 self.attack_rect = pygame.Rect(self.rect.centerx - 1, self.rect.centery - 1, self.length,
@@ -343,7 +379,6 @@ class Player(pygame.sprite.Sprite):  # sprite class
     def hit_detector(self, opponent, user_event):
         # if the rect of the tongue hits the player rect
         opp_hitbox_rect = pygame.Rect(opponent.rect.x, opponent.rect.y, opponent.rect.width, opponent.rect.height)
-        # TODO sort out ducking hitbox, ducking works but for future adaptability ducking should use a smaller hitbox
         if self.attack_rect.colliderect(opp_hitbox_rect) and self.invincibility_timer == 0 and not opponent.ducking:
             self.hit_bool = True
             # make the player invincible after they have been hit
@@ -357,6 +392,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
             self.invincibility_timer -= 1
 
     def death(self, opponent):
+        # sets the criteria for how a player is to die
         if opponent.health <= 0:
             opponent.lives -= 1
             opponent.health = 100
@@ -375,6 +411,8 @@ class HandleWinning:
         self.player = player
 
     def winner_screen(self, screen, colour):
+        # displays the text that says who won in the middle of the screen. the colour of the screen also changes to
+        # the colour of whichever player won
         if self.player.winner:
             screen.display.fill(colour)
             winner_text = self.font.render(self.player.name + " Won!", 1, red)
@@ -390,13 +428,13 @@ class PlayerStats:
         self.health_rect = pygame.Rect(0, 0, 0, 0)
         self.healthbar_height = 14
         self.healthbar_width = 52
-        self.healthbar_width_div_4 = 13
+        self.healthbar_width_div_4 = 13  # amount taken off the health bar each time the player is hit.
         self.healthbar_posx = healthbar_posx
         self.healthbar_posy = healthbar_posy
         self.health_rect_posx = health_rect_posx
         self.health_rect_posy = health_rect_posy
         self.font = pygame.font.Font("freesansbold.ttf", 10)
-        for image in self.stats_img_list:
+        for image in self.stats_img_list:  # uses a sort of green screen effect to remove any white from the image
             image.set_colorkey(white)
 
     def health_stats(self, screen, player):
@@ -422,6 +460,8 @@ class PlayerStats:
 
 def main():
 
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
     # create objects
 
     clock = pygame.time.Clock()
@@ -432,7 +472,10 @@ def main():
     map = Map("assets/map.txt")
     map.load_map()
 
-    # players
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+    # players section
+
     # player1 images lists
     player_1_images = [pygame.image.load("assets/frog_p1_right.png"), pygame.image.load("assets/frog_p1_left.png"),
                        pygame.image.load("assets/dead_img.png")]
@@ -489,7 +532,9 @@ def main():
     player_1_hit = pygame.USEREVENT + 1
     player_2_hit = pygame.USEREVENT + 2
 
-    # stats stuff
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+    # stats section
     # stats images
     stats_images = [pygame.image.load("assets/healthbar.png")]
 
@@ -500,15 +545,26 @@ def main():
     # health bar is 64 pixels long
     stats_p2 = PlayerStats(stats_images, (screen_width - 64 - 5), (screen_height - screen_height + 5),
                            ((screen_width - 64 - 5) + 6), ((screen_height - screen_height + 5) + 1))
-    # winning_stuff
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+    # winning section
+
     handle_winning_p1 = HandleWinning(player_1)
     handle_winning_p2 = HandleWinning(player_2)
 
-    while True:
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+    while True:  # game loop, executes all functions and procedures
 
         clock.tick(FPS)
 
         map.draw_map(screen)
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+        # all things that need to be called in the main loop for each player to work properly
+
         stats_p1.health_stats(screen, player_2)
         stats_p2.health_stats(screen, player_1)
         stats_p1.other_stats(screen.display, player_2)
@@ -522,19 +578,26 @@ def main():
         player_2.move(map.tile_rects, screen_rect)
         player_1.death(player_2)
         player_2.death(player_1)
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+        # event loop, used for looping though the player events such as key presses.
+
         for event in pygame.event.get():
             player_1.events(event, player_2_hit, player_2)
             player_2.events(event, player_1_hit, player_1)
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
         player_1.player_animations()
         player_2.player_animations()
         handle_winning_p1.winner_screen(screen, green)
         handle_winning_p2.winner_screen(screen, pink)
         screen.scale()
-        map.tile_rects.clear()
+        map.tile_rects.clear()  # without clearing this list the game would become extremely slow
         screen.display.fill(steel_blue)
-        pygame.display.flip()
+        pygame.display.flip()  # an alternative and more efficient way of updating the screen in pygame
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # used to help make this file run within other files
     main()
