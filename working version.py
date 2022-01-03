@@ -128,7 +128,7 @@ class Player(pygame.sprite.Sprite):  # sprite class
         self.invincibility_timer = 0
         self.healthbar_decreaser = False
         self.dodging = False
-        self.lives = 2
+        self.lives = 3
         self.loser = False
         self.winner = False
         self.name = name
