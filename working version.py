@@ -516,7 +516,7 @@ def main():
     player_2_attack_sequence = [pygame.image.load("assets/frog_p2_attack_right.png"),
                                 pygame.image.load("assets/frog_p2_attack_left.png")]
 
-    # def the player obejcts
+    # def the player objects
     player_1 = Player(200, 100, player_1_images, player_1_walking_sequence_left, player_1_walking_sequence_right,
                       player_1_attack_sequence, pygame.K_a, pygame.K_d, pygame.K_s, pygame.K_w, pygame.K_LSHIFT,
                       tongue_purple, player_1_ducking_sequence, "Green Froggy")
